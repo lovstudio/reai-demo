@@ -13,13 +13,33 @@
 </p>
 
 <p align="center">
+  <a href="#产品截图">产品截图</a> ·
   <a href="#功能">功能</a> ·
   <a href="#交互映射">交互映射</a> ·
   <a href="#快速开始">快速开始</a> ·
   <a href="#实时语音与本地记忆">实时语音</a> ·
-  <a href="#开发与验证">开发</a> ·
+  <a href="#开发与验证">开发与验证</a> ·
   <a href="#许可证">许可证</a>
 </p>
+
+## 产品截图
+
+以下界面均来自实际运行的 macOS 原生 App，而非设计稿或概念图。
+
+<p align="center">
+  <img src="docs/images/screenshots/mode-switcher.png" alt="REAI Demo 模式选择器，可切换音乐、游戏与设置" width="100%">
+</p>
+<p align="center"><sub>按 Tab 呼出的居中模式选择器</sub></p>
+
+<p align="center">
+  <img src="docs/images/screenshots/brick-breaker.png" alt="REAI Demo 打砖块游戏界面" width="100%">
+</p>
+<p align="center"><sub>游戏模式：旋钮移动挡板，推杆切换速度</sub></p>
+
+<p align="center">
+  <img src="docs/images/screenshots/settings.png" alt="REAI Demo 设置界面，桌宠显示与语音对话可独立控制" width="760">
+</p>
+<p align="center"><sub>设置模式：蓝牙、桌宠桌面显示与语音对话分别控制</sub></p>
 
 ## 功能
 
@@ -195,6 +215,10 @@ Keychain，不写入仓库、配置文件或日志。实时链路使用 Seeduple
 - macOS Keychain、`NSUserDefaults`、LaunchAgent
 
 项目参考 [ReAI Board SDK](https://github.com/ReAI-com/reai-board-sdk) 的设备连接与协议资料。
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=lovstudio/reai-demo&type=Date)](https://star-history.com/#lovstudio/reai-demo&Date)
 
 ## 许可证
 
