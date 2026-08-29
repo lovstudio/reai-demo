@@ -1,0 +1,8 @@
+.DS_Store
+*.dSYM/
+*.bin
+.local/
+
+REAI Music Controller.app/
+reai-key-config
+reai-volume-controller

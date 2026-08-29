@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>zh_CN</string>
+    <key>CFBundleDisplayName</key>
+    <string>REAI Music Controller</string>
+    <key>CFBundleExecutable</key>
+    <string>reai-music-controller</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.shougongchuan.reai-music-controller</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>REAI Music Controller</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+	<string>0.3.8</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMultipleInstancesProhibited</key>
+    <true/>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>用于通过 REAI Vibe Board 控制音乐模式的电台、歌单和播放状态。</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
+    </dict>
+    <key>NSInputMonitoringUsageDescription</key>
+    <string>用于接收 REAI Vibe Board 的旋钮、推杆、AI 语音键与其他按键事件。</string>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>用于在拔下 USB 后通过蓝牙连接 REAI Vibe Board，并继续接收旋钮、推杆与按键事件。</string>
+    <key>NSBluetoothPeripheralUsageDescription</key>
+    <string>用于通过蓝牙连接 REAI Vibe Board。</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>按住 REAI AI 语音键时录制语音，并在本机转录为桌宠对话文字。</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>将按住 REAI AI 语音键期间的语音在本机转录为文字。</string>
+</dict>
+</plist>
