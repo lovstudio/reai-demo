@@ -83,7 +83,7 @@ Action 或旋钮按下执行；所有设置通过 `NSUserDefaults` 持久化。
 
 ```bash
 brew install hidapi
-git clone git@github.com:lovstudio/reai-demo.git
+git clone https://github.com/lovstudio/reai-demo.git
 cd reai-demo
 ./build.sh
 ```
