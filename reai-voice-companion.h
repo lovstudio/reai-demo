@@ -19,6 +19,7 @@ BOOL REAIVoiceCompanionRunRealtimeTranscriptSelfTest(void);
 - (void)configureVolcengineTTS;
 - (void)voiceKeyPressed;
 - (void)voiceKeyReleased;
+- (void)cancelVoiceInteraction;
 - (void)acceptTranscriptForTesting:(NSString *)transcript speak:(BOOL)speak;
 - (void)acceptRealtimePCMForTesting:(NSData *)audioData;
 @end

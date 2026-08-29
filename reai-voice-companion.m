@@ -954,8 +954,6 @@ static void reai_output_queue_callback(void *userData,
 
 - (void)hide {
     [self.panel orderOut:nil];
-    [self.conversationPanel orderOut:nil];
-    [self hideTranscriptOverlayImmediately];
     self.visible = NO;
 }
 
@@ -966,7 +964,6 @@ static void reai_output_queue_callback(void *userData,
 - (void)voiceKeyPressed {
     self.voiceKeyDown = YES;
     if (self.recording) return;
-    [self show];
     [self showTranscriptOverlayWithText:@"正在听…"];
     [self requestPermissionsAndStart];
 }
@@ -1786,6 +1783,48 @@ didCompleteWithError:(NSError *)error {
     });
 }
 
+- (void)cancelVoiceInteraction {
+    self.voiceKeyDown = NO;
+    self.recording = NO;
+    self.awaitingFinalResult = NO;
+    self.recognitionGeneration += 1;
+    [self.companionView setListening:NO];
+
+    AudioQueueRef inputQueue = self.inputQueue;
+    self.inputQueue = NULL;
+    if (inputQueue != NULL) {
+        AudioQueueStop(inputQueue, true);
+        AudioQueueDispose(inputQueue, true);
+    }
+    self.inputFormat = nil;
+    [self.recognitionTask cancel];
+    self.recognitionTask = nil;
+    self.recognitionRequest = nil;
+    self.partialTranscript = @"";
+
+    self.realtimeGeneration += 1;
+    self.realtimeActive = NO;
+    self.realtimeSessionReady = NO;
+    self.realtimeTurnReleased = NO;
+    self.realtimeReplyDelivered = NO;
+    [self.realtimeSocket cancelWithCloseCode:NSURLSessionWebSocketCloseCodeGoingAway reason:nil];
+    self.realtimeSocket = nil;
+    [self.realtimeURLSession invalidateAndCancel];
+    self.realtimeURLSession = nil;
+    [self.realtimePendingAudio removeAllObjects];
+    [self stopRealtimeAudioImmediately];
+
+    self.ttsGeneration += 1;
+    [self.ttsTask cancel];
+    self.ttsTask = nil;
+    [self.ttsPlayer stop];
+    self.ttsPlayer = nil;
+    [self.speechSynthesizer stopSpeakingAtBoundary:AVSpeechBoundaryImmediate];
+    [self hideTranscriptOverlayImmediately];
+    self.conversationView.statusLabel.stringValue = @"READY · 语音对话已关闭";
+    self.logHandler(@"VOICE", @"语音对话已关闭，当前语音链路已停止");
+}
+
 - (void)finalizeRecognitionForGeneration:(NSUInteger)generation {
     if (!self.awaitingFinalResult || generation != self.recognitionGeneration) return;
     self.awaitingFinalResult = NO;
@@ -1812,7 +1851,6 @@ didCompleteWithError:(NSError *)error {
 
 - (void)acceptRealtimePCMForTesting:(NSData *)audioData {
     if (audioData.length == 0 || self.recording) return;
-    [self show];
     [self showTranscriptOverlayWithText:@"正在输入测试语音…"];
     [self startRealtimeTurn];
     self.realtimeTestTurn = YES;
@@ -1846,8 +1884,6 @@ didCompleteWithError:(NSError *)error {
     NSString *trimmed = [transcript stringByTrimmingCharactersInSet:
                          NSCharacterSet.whitespaceAndNewlineCharacterSet];
     if (trimmed.length == 0) return;
-    [self show];
-    [self showConversation];
     [self handleCompletedTranscript:trimmed speak:speak];
 }
 

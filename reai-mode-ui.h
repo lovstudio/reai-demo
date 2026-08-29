@@ -13,6 +13,7 @@ typedef NS_ENUM(NSInteger, REAISettingsRow) {
     REAISettingsRowBluetoothReconnect = 1,
     REAISettingsRowBluetoothForget = 2,
     REAISettingsRowDesktopPet = 3,
+    REAISettingsRowVoiceConversation = 4,
 };
 
 @interface REAIModeOverlayController : NSObject
@@ -22,14 +23,17 @@ typedef NS_ENUM(NSInteger, REAISettingsRow) {
 - (void)showSelectorWithMode:(REAIExperienceMode)mode;
 - (void)showGame;
 - (void)showSettingsWithDesktopPetEnabled:(BOOL)desktopPetEnabled
+                 voiceConversationEnabled:(BOOL)voiceConversationEnabled
                 bluetoothAutoConnectEnabled:(BOOL)bluetoothAutoConnectEnabled
                            connectionStatus:(NSString *)connectionStatus
                                  deviceName:(nullable NSString *)deviceName;
 - (void)updateSettingsWithDesktopPetEnabled:(BOOL)desktopPetEnabled
+                   voiceConversationEnabled:(BOOL)voiceConversationEnabled
                   bluetoothAutoConnectEnabled:(BOOL)bluetoothAutoConnectEnabled
                              connectionStatus:(NSString *)connectionStatus
                                    deviceName:(nullable NSString *)deviceName;
 - (void)setDesktopPetEnabled:(BOOL)enabled;
+- (void)setVoiceConversationEnabled:(BOOL)enabled;
 - (void)moveSettingsSelectionBy:(NSInteger)delta;
 - (REAISettingsRow)selectedSettingsRow;
 - (void)setSettingsForgetConfirmation:(BOOL)confirmation;

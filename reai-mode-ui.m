@@ -199,6 +199,7 @@ static NSColor *reai_color(CGFloat red, CGFloat green, CGFloat blue, CGFloat alp
 
 @interface REAISettingsView : NSView
 @property(nonatomic, assign) BOOL desktopPetEnabled;
+@property(nonatomic, assign) BOOL voiceConversationEnabled;
 @property(nonatomic, assign) BOOL bluetoothAutoConnectEnabled;
 @property(nonatomic, assign) REAISettingsRow selectedRow;
 @property(nonatomic, assign) BOOL forgetConfirmation;
@@ -286,7 +287,7 @@ static NSColor *reai_color(CGFloat red, CGFloat green, CGFloat blue, CGFloat alp
     [@"设置" drawAtPoint:NSMakePoint(32, NSMaxY(bounds) - 94) withAttributes:heading];
 
     NSColor *accent = reai_color(0.28, 0.84, 0.62, 1.0);
-    NSRect deviceCard = NSMakeRect(32, 385, NSWidth(bounds) - 64, 82);
+    NSRect deviceCard = NSMakeRect(32, 461, NSWidth(bounds) - 64, 82);
     NSBezierPath *devicePath = [NSBezierPath bezierPathWithRoundedRect:deviceCard xRadius:20 yRadius:20];
     [[accent colorWithAlphaComponent:0.10] setFill];
     [devicePath fill];
@@ -297,25 +298,25 @@ static NSColor *reai_color(CGFloat red, CGFloat green, CGFloat blue, CGFloat alp
         NSForegroundColorAttributeName: accent,
         NSKernAttributeName: @1.2
     };
-    [@"BLUETOOTH DEVICE" drawAtPoint:NSMakePoint(54, 438) withAttributes:deviceLabel];
+    [@"BLUETOOTH DEVICE" drawAtPoint:NSMakePoint(54, 514) withAttributes:deviceLabel];
     NSDictionary *deviceNameAttributes = @{
         NSFontAttributeName: reai_font(@"AvenirNext-DemiBold", 19, NSFontWeightSemibold),
         NSForegroundColorAttributeName: NSColor.whiteColor
     };
     NSString *deviceName = self.deviceName.length > 0 ? self.deviceName : @"尚未配对设备";
-    [deviceName drawAtPoint:NSMakePoint(54, 405) withAttributes:deviceNameAttributes];
+    [deviceName drawAtPoint:NSMakePoint(54, 481) withAttributes:deviceNameAttributes];
     NSDictionary *statusAttributes = @{
         NSFontAttributeName: reai_font(@"AvenirNext-Medium", 12, NSFontWeightMedium),
         NSForegroundColorAttributeName: reai_color(0.66, 0.71, 0.76, 1.0)
     };
     NSString *status = self.connectionStatus.length > 0 ? self.connectionStatus : @"蓝牙状态未知";
     NSSize statusSize = [status sizeWithAttributes:statusAttributes];
-    [status drawAtPoint:NSMakePoint(NSMaxX(deviceCard) - statusSize.width - 22, 414)
+    [status drawAtPoint:NSMakePoint(NSMaxX(deviceCard) - statusSize.width - 22, 490)
          withAttributes:statusAttributes];
 
     CGFloat rowX = 32;
     CGFloat rowWidth = NSWidth(bounds) - 64;
-    NSRect autoRow = NSMakeRect(rowX, 304, rowWidth, 66);
+    NSRect autoRow = NSMakeRect(rowX, 380, rowWidth, 66);
     [self drawActionRow:autoRow
                     row:REAISettingsRowBluetoothAutoConnect
                   title:@"蓝牙自动连接"
@@ -325,7 +326,7 @@ static NSColor *reai_color(CGFloat red, CGFloat green, CGFloat blue, CGFloat alp
     [self drawToggleInRect:NSMakeRect(NSMaxX(autoRow) - 82, NSMidY(autoRow) - 17, 62, 34)
                     enabled:self.bluetoothAutoConnectEnabled
                      accent:accent];
-    [self drawActionRow:NSMakeRect(rowX, 228, rowWidth, 66)
+    [self drawActionRow:NSMakeRect(rowX, 304, rowWidth, 66)
                     row:REAISettingsRowBluetoothReconnect
                   title:@"重新扫描 / 连接"
                    body:@"立即查找并连接已记住或附近的 REAI 设备"
@@ -335,21 +336,31 @@ static NSColor *reai_color(CGFloat red, CGFloat green, CGFloat blue, CGFloat alp
     NSString *forgetBody = self.forgetConfirmation
         ? @"将清除设备记录并关闭自动连接"
         : @"清除当前设备记录；之后可重新扫描连接";
-    [self drawActionRow:NSMakeRect(rowX, 152, rowWidth, 66)
+    [self drawActionRow:NSMakeRect(rowX, 228, rowWidth, 66)
                     row:REAISettingsRowBluetoothForget
                   title:forgetTitle
                    body:forgetBody
               accessory:self.forgetConfirmation ? @"CONFIRM" : @"ENTER"
                  danger:YES];
-    NSRect petRow = NSMakeRect(rowX, 76, rowWidth, 66);
+    NSRect petRow = NSMakeRect(rowX, 152, rowWidth, 66);
     [self drawActionRow:petRow
                     row:REAISettingsRowDesktopPet
-                  title:@"桌宠 · 川仔"
-                   body:@"显示桌面伙伴；设置会在下次启动时保留"
+                  title:@"桌宠桌面显示"
+                   body:@"只控制川仔是否常驻桌面，不影响语音对话"
               accessory:@""
                  danger:NO];
     [self drawToggleInRect:NSMakeRect(NSMaxX(petRow) - 82, NSMidY(petRow) - 17, 62, 34)
                     enabled:self.desktopPetEnabled
+                     accent:accent];
+    NSRect voiceRow = NSMakeRect(rowX, 76, rowWidth, 66);
+    [self drawActionRow:voiceRow
+                    row:REAISettingsRowVoiceConversation
+                  title:@"语音对话"
+                   body:@"只控制语音键录音、转录与 AI 回复"
+              accessory:@""
+                 danger:NO];
+    [self drawToggleInRect:NSMakeRect(NSMaxX(voiceRow) - 82, NSMidY(voiceRow) - 17, 62, 34)
+                    enabled:self.voiceConversationEnabled
                      accent:accent];
 
     NSDictionary *hint = @{
@@ -645,7 +656,7 @@ static NSColor *reai_color(CGFloat red, CGFloat green, CGFloat blue, CGFloat alp
                                         NSWindowCollectionBehaviorFullScreenAuxiliary;
         self.selectorView = [[REAIModeSelectorView alloc] initWithFrame:NSMakeRect(0, 0, 780, 360)];
         self.gameView = [[REAIBrickBreakerView alloc] initWithFrame:NSMakeRect(0, 0, 780, 500)];
-        self.settingsView = [[REAISettingsView alloc] initWithFrame:NSMakeRect(0, 0, 720, 570)];
+        self.settingsView = [[REAISettingsView alloc] initWithFrame:NSMakeRect(0, 0, 720, 646)];
         self.settingsView.selectedRow = REAISettingsRowBluetoothAutoConnect;
     }
     return self;
@@ -678,17 +689,19 @@ static NSColor *reai_color(CGFloat red, CGFloat green, CGFloat blue, CGFloat alp
 }
 
 - (void)showSettingsWithDesktopPetEnabled:(BOOL)desktopPetEnabled
+                 voiceConversationEnabled:(BOOL)voiceConversationEnabled
                 bluetoothAutoConnectEnabled:(BOOL)bluetoothAutoConnectEnabled
                            connectionStatus:(NSString *)connectionStatus
                                  deviceName:(NSString *)deviceName {
     [NSApp unhideWithoutActivation];
     [self.gameView pause];
     [self updateSettingsWithDesktopPetEnabled:desktopPetEnabled
+                  voiceConversationEnabled:voiceConversationEnabled
                   bluetoothAutoConnectEnabled:bluetoothAutoConnectEnabled
                              connectionStatus:connectionStatus
                                    deviceName:deviceName];
     [self.settingsView setNeedsDisplay:YES];
-    [self.panel setContentSize:NSMakeSize(720, 570)];
+    [self.panel setContentSize:NSMakeSize(720, 646)];
     self.panel.contentView = self.settingsView;
     [self.panel center];
     [self.panel orderFrontRegardless];
@@ -698,10 +711,12 @@ static NSColor *reai_color(CGFloat red, CGFloat green, CGFloat blue, CGFloat alp
 }
 
 - (void)updateSettingsWithDesktopPetEnabled:(BOOL)desktopPetEnabled
+                   voiceConversationEnabled:(BOOL)voiceConversationEnabled
                   bluetoothAutoConnectEnabled:(BOOL)bluetoothAutoConnectEnabled
                              connectionStatus:(NSString *)connectionStatus
                                    deviceName:(NSString *)deviceName {
     self.settingsView.desktopPetEnabled = desktopPetEnabled;
+    self.settingsView.voiceConversationEnabled = voiceConversationEnabled;
     self.settingsView.bluetoothAutoConnectEnabled = bluetoothAutoConnectEnabled;
     self.settingsView.connectionStatus = connectionStatus ?: @"蓝牙状态未知";
     self.settingsView.deviceName = deviceName ?: @"";
@@ -713,8 +728,13 @@ static NSColor *reai_color(CGFloat red, CGFloat green, CGFloat blue, CGFloat alp
     [self.settingsView setNeedsDisplay:YES];
 }
 
+- (void)setVoiceConversationEnabled:(BOOL)enabled {
+    self.settingsView.voiceConversationEnabled = enabled;
+    [self.settingsView setNeedsDisplay:YES];
+}
+
 - (void)moveSettingsSelectionBy:(NSInteger)delta {
-    NSInteger count = REAISettingsRowDesktopPet + 1;
+    NSInteger count = REAISettingsRowVoiceConversation + 1;
     NSInteger selected = (self.settingsView.selectedRow + delta) % count;
     if (selected < 0) selected += count;
     self.settingsView.selectedRow = (REAISettingsRow)selected;
@@ -754,9 +774,10 @@ static NSColor *reai_color(CGFloat red, CGFloat green, CGFloat blue, CGFloat alp
 @end
 
 BOOL REAIRenderSettingsPreview(NSString *path) {
-    NSRect frame = NSMakeRect(0, 0, 720, 570);
+    NSRect frame = NSMakeRect(0, 0, 720, 646);
     REAISettingsView *view = [[REAISettingsView alloc] initWithFrame:frame];
     view.desktopPetEnabled = YES;
+    view.voiceConversationEnabled = NO;
     view.bluetoothAutoConnectEnabled = YES;
     view.selectedRow = REAISettingsRowBluetoothReconnect;
     view.connectionStatus = @"蓝牙已连接";

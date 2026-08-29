@@ -67,6 +67,7 @@ static NSString *const ChatRadioStationID = @"ra.q-MMLEBw";
 static NSString *const PlanCatalogPlaylistID = @"pl.998d1aa71ae64e1f9199d0a112067149";
 static NSString *const AppleMusicStorefront = @"cn";
 static NSString *const DesktopPetEnabledDefaultsKey = @"desktop-pet-enabled";
+static NSString *const VoiceConversationEnabledDefaultsKey = @"voice-conversation-enabled";
 
 static NSString *experience_mode_name(REAIExperienceMode mode) {
     switch (mode) {
@@ -252,6 +253,7 @@ static int query_work_mode(void) {
 @property(nonatomic, strong) NSMenuItem *modeMenuItem;
 @property(nonatomic, strong) NSMenuItem *experienceMenuItem;
 @property(nonatomic, strong) NSMenuItem *companionMenuItem;
+@property(nonatomic, strong) NSMenuItem *voiceConversationMenuItem;
 @property(nonatomic, assign) BOOL listenerStarted;
 @property(nonatomic, assign) BOOL stopping;
 @property(nonatomic, assign) BOOL permissionDenialLogged;
@@ -265,6 +267,7 @@ static int query_work_mode(void) {
 @property(nonatomic, assign) REAIExperienceMode selectedExperienceMode;
 @property(nonatomic, assign) REAIExperienceMode selectorReturnMode;
 @property(nonatomic, assign) BOOL desktopPetEnabled;
+@property(nonatomic, assign) BOOL voiceConversationEnabled;
 @property(nonatomic, assign) BOOL bluetoothVoiceKeyHeld;
 @property(nonatomic, assign) BOOL bluetoothNonVoicePulseWhileVoiceHeld;
 @property(nonatomic, assign) uint16_t bluetoothPreviousValue;
@@ -278,6 +281,8 @@ static int query_work_mode(void) {
 - (void)playPlaylistForMode:(NSString *)mode;
 - (void)handleConsumerValue:(uint16_t)value;
 - (void)applyDesktopPetEnabled:(BOOL)enabled;
+- (void)applyVoiceConversationEnabled:(BOOL)enabled;
+- (void)handleVoiceKeyReleased;
 - (void)navigateBack;
 - (void)handleBluetoothConsumerValue:(uint16_t)value;
 - (void)showSettingsOverlay;
@@ -295,6 +300,11 @@ static int query_work_mode(void) {
     self.desktopPetEnabled = storedDesktopPetSetting == nil
         ? YES
         : [storedDesktopPetSetting boolValue];
+    id storedVoiceConversationSetting = [[NSUserDefaults standardUserDefaults]
+        objectForKey:VoiceConversationEnabledDefaultsKey];
+    self.voiceConversationEnabled = storedVoiceConversationSetting == nil
+        ? YES
+        : [storedVoiceConversationSetting boolValue];
     [self configureStatusMenu];
     controller_log(@"READY", @"REAI Music Controller 已启动");
     self.catalogPlaylistCache = [NSMutableDictionary dictionary];
@@ -329,7 +339,7 @@ static int query_work_mode(void) {
             if (!connected && weakSelf.bluetoothVoiceKeyHeld) {
                 weakSelf.bluetoothVoiceKeyHeld = NO;
                 weakSelf.bluetoothNonVoicePulseWhileVoiceHeld = NO;
-                [weakSelf.voiceCompanion voiceKeyReleased];
+                [weakSelf handleVoiceKeyReleased];
             }
             if (!connected) weakSelf.bluetoothInitialModePending = NO;
             [weakSelf refreshSettingsOverlay];
@@ -345,6 +355,12 @@ static int query_work_mode(void) {
         [self.voiceCompanion hide];
     }
     [self.modeOverlay setDesktopPetEnabled:self.desktopPetEnabled];
+    [self.modeOverlay setVoiceConversationEnabled:self.voiceConversationEnabled];
+    [[NSDistributedNotificationCenter defaultCenter]
+        addObserver:self
+           selector:@selector(simulatedSettingNotification:)
+               name:@"com.shougongchuan.reai.simulate-setting"
+             object:nil];
     [[NSDistributedNotificationCenter defaultCenter]
         addObserver:self
            selector:@selector(simulatedKeyNotification:)
@@ -378,7 +394,7 @@ static int query_work_mode(void) {
     (void)notification;
     self.stopping = YES;
     [self.bluetoothBridge stop];
-    [self.voiceCompanion voiceKeyReleased];
+    [self.voiceCompanion cancelVoiceInteraction];
     [[NSDistributedNotificationCenter defaultCenter] removeObserver:self];
     controller_log(@"STOPPED", @"REAI Music Controller 已退出");
 }
@@ -388,7 +404,7 @@ static int query_work_mode(void) {
     if ([value isKindOfClass:NSNumber.class]) {
         uint16_t rawValue = (uint16_t)value.unsignedShortValue;
         if (rawValue == 0) {
-            [self.voiceCompanion voiceKeyReleased];
+            [self handleVoiceKeyReleased];
         } else if (rawValue == REAI_MODE_YOLO) {
             [self setWorkMode:@"YOLO" triggerPlaylist:YES];
         } else if (rawValue == REAI_MODE_CHAT) {
@@ -401,7 +417,22 @@ static int query_work_mode(void) {
     }
 }
 
+- (void)simulatedSettingNotification:(NSNotification *)notification {
+    NSString *setting = notification.userInfo[@"setting"];
+    NSNumber *enabled = notification.userInfo[@"enabled"];
+    if (![setting isKindOfClass:NSString.class] || ![enabled isKindOfClass:NSNumber.class]) return;
+    if ([setting isEqualToString:@"desktop-pet"]) {
+        [self applyDesktopPetEnabled:enabled.boolValue];
+    } else if ([setting isEqualToString:@"voice-conversation"]) {
+        [self applyVoiceConversationEnabled:enabled.boolValue];
+    }
+}
+
 - (void)simulatedTranscriptNotification:(NSNotification *)notification {
+    if (!self.voiceConversationEnabled) {
+        controller_log(@"VOICE_DISABLED", @"语音对话已关闭，忽略测试转录");
+        return;
+    }
     NSString *transcript = notification.userInfo[@"text"];
     NSNumber *speak = notification.userInfo[@"speak"];
     if ([transcript isKindOfClass:NSString.class]) {
@@ -410,6 +441,10 @@ static int query_work_mode(void) {
 }
 
 - (void)simulatedRealtimeAudioNotification:(NSNotification *)notification {
+    if (!self.voiceConversationEnabled) {
+        controller_log(@"VOICE_DISABLED", @"语音对话已关闭，忽略测试音频");
+        return;
+    }
     NSString *path = notification.userInfo[@"path"];
     if (![path isKindOfClass:NSString.class]) return;
     NSData *audio = [NSData dataWithContentsOfFile:path];
@@ -449,8 +484,12 @@ static int query_work_mode(void) {
     [menu addItem:NSMenuItem.separatorItem];
     [menu addItemWithTitle:@"打开日志" action:@selector(openLog:) keyEquivalent:@""];
     self.companionMenuItem = [menu addItemWithTitle:
-        (self.desktopPetEnabled ? @"桌宠：开启" : @"桌宠：关闭")
+        (self.desktopPetEnabled ? @"桌宠桌面显示：开启" : @"桌宠桌面显示：关闭")
                                                action:@selector(toggleCompanion:)
+                                        keyEquivalent:@""];
+    self.voiceConversationMenuItem = [menu addItemWithTitle:
+        (self.voiceConversationEnabled ? @"语音对话：开启" : @"语音对话：关闭")
+                                               action:@selector(toggleVoiceConversation:)
                                         keyEquivalent:@""];
     [menu addItemWithTitle:@"查看对话记录" action:@selector(showCompanionConversation:) keyEquivalent:@""];
     [menu addItemWithTitle:@"打开桌宠记忆" action:@selector(openCompanionMemory:) keyEquivalent:@""];
@@ -475,6 +514,7 @@ static int query_work_mode(void) {
     self.settingsForgetConfirmation = NO;
     [self.modeOverlay setSettingsForgetConfirmation:NO];
     [self.modeOverlay showSettingsWithDesktopPetEnabled:self.desktopPetEnabled
+                             voiceConversationEnabled:self.voiceConversationEnabled
                             bluetoothAutoConnectEnabled:self.bluetoothBridge.autoConnectEnabled
                                        connectionStatus:[self bluetoothSettingsStatus]
                                              deviceName:self.bluetoothBridge.rememberedDeviceName];
@@ -483,6 +523,7 @@ static int query_work_mode(void) {
 - (void)refreshSettingsOverlay {
     if (!self.modeOverlay.showingSettings) return;
     [self.modeOverlay updateSettingsWithDesktopPetEnabled:self.desktopPetEnabled
+                               voiceConversationEnabled:self.voiceConversationEnabled
                               bluetoothAutoConnectEnabled:self.bluetoothBridge.autoConnectEnabled
                                          connectionStatus:[self bluetoothSettingsStatus]
                                                deviceName:self.bluetoothBridge.rememberedDeviceName];
@@ -493,7 +534,8 @@ static int query_work_mode(void) {
         case REAISettingsRowBluetoothAutoConnect: return @"蓝牙自动连接";
         case REAISettingsRowBluetoothReconnect: return @"重新扫描 / 连接";
         case REAISettingsRowBluetoothForget: return @"忘记蓝牙设备";
-        case REAISettingsRowDesktopPet: return @"桌宠 · 川仔";
+        case REAISettingsRowDesktopPet: return @"桌宠桌面显示";
+        case REAISettingsRowVoiceConversation: return @"语音对话";
     }
     return @"设置";
 }
@@ -536,6 +578,11 @@ static int query_work_mode(void) {
             self.settingsForgetConfirmation = NO;
             [self.modeOverlay setSettingsForgetConfirmation:NO];
             [self applyDesktopPetEnabled:!self.desktopPetEnabled];
+            break;
+        case REAISettingsRowVoiceConversation:
+            self.settingsForgetConfirmation = NO;
+            [self.modeOverlay setSettingsForgetConfirmation:NO];
+            [self applyVoiceConversationEnabled:!self.voiceConversationEnabled];
             break;
     }
 }
@@ -719,10 +766,37 @@ static int query_work_mode(void) {
     } else {
         [self.modeOverlay setDesktopPetEnabled:enabled];
     }
-    self.companionMenuItem.title = enabled ? @"桌宠：开启" : @"桌宠：关闭";
-    NSString *status = enabled ? @"桌宠已开启" : @"桌宠已关闭";
+    self.companionMenuItem.title = enabled
+        ? @"桌宠桌面显示：开启" : @"桌宠桌面显示：关闭";
+    NSString *status = enabled ? @"桌宠桌面显示已开启" : @"桌宠桌面显示已关闭";
     [self setStatus:status];
     controller_log(@"SETTINGS", status);
+}
+
+- (void)toggleVoiceConversation:(id)sender {
+    (void)sender;
+    [self applyVoiceConversationEnabled:!self.voiceConversationEnabled];
+}
+
+- (void)applyVoiceConversationEnabled:(BOOL)enabled {
+    self.voiceConversationEnabled = enabled;
+    [[NSUserDefaults standardUserDefaults] setBool:enabled
+                                            forKey:VoiceConversationEnabledDefaultsKey];
+    if (!enabled) [self.voiceCompanion cancelVoiceInteraction];
+    if (self.modeOverlay.showingSettings) {
+        [self refreshSettingsOverlay];
+    } else {
+        [self.modeOverlay setVoiceConversationEnabled:enabled];
+    }
+    self.voiceConversationMenuItem.title = enabled ? @"语音对话：开启" : @"语音对话：关闭";
+    NSString *status = enabled ? @"语音对话已开启" : @"语音对话已关闭";
+    [self setStatus:status];
+    controller_log(@"SETTINGS", status);
+}
+
+- (void)handleVoiceKeyReleased {
+    if (!self.voiceConversationEnabled) return;
+    [self.voiceCompanion voiceKeyReleased];
 }
 
 - (void)openCompanionMemory:(id)sender {
@@ -1184,9 +1258,12 @@ static int query_work_mode(void) {
             break;
         case REAI_KEY_VOICE:
         case REAI_KEY_VOICE_MARK:
-            if (self.desktopPetEnabled) {
+            if (self.voiceConversationEnabled) {
                 [self.voiceCompanion voiceKeyPressed];
-                [self setStatus:@"桌宠正在听"];
+                [self setStatus:@"语音对话正在听"];
+            } else {
+                [self setStatus:@"语音对话已关闭"];
+                controller_log(@"VOICE_DISABLED", @"语音键已忽略");
             }
             break;
         case REAI_KEY_TAB:
@@ -1229,7 +1306,7 @@ static int query_work_mode(void) {
         } else {
             self.bluetoothVoiceKeyHeld = NO;
             controller_log(@"KEY", @"AI 语音键释放（BLE）");
-            [self.voiceCompanion voiceKeyReleased];
+            [self handleVoiceKeyReleased];
         }
     }
 
@@ -1311,7 +1388,7 @@ static int query_work_mode(void) {
                     voiceKeyHeld = NO;
                     controller_log(@"KEY", @"AI 语音键释放");
                     dispatch_async(dispatch_get_main_queue(), ^{
-                        [self.voiceCompanion voiceKeyReleased];
+                        [self handleVoiceKeyReleased];
                     });
                 }
             }
@@ -1343,7 +1420,7 @@ static int query_work_mode(void) {
         }
         if (voiceKeyHeld) {
             dispatch_async(dispatch_get_main_queue(), ^{
-                [self.voiceCompanion voiceKeyReleased];
+                [self handleVoiceKeyReleased];
             });
         }
         hid_close(device);
@@ -1450,6 +1527,29 @@ int main(int argc, const char *argv[]) {
                 postNotificationName:@"com.shougongchuan.reai.simulate-key"
                               object:nil
                             userInfo:@{@"value": @((uint16_t)rawValue)}
+                  deliverImmediately:YES];
+            return 0;
+        }
+        if (argc == 4 && strcmp(argv[1], "--notify-setting") == 0) {
+            NSString *setting = [NSString stringWithUTF8String:argv[2]];
+            BOOL validSetting = [setting isEqualToString:@"desktop-pet"] ||
+                                [setting isEqualToString:@"voice-conversation"];
+            BOOL enabled = strcmp(argv[3], "on") == 0 ||
+                           strcmp(argv[3], "true") == 0 ||
+                           strcmp(argv[3], "1") == 0;
+            BOOL validValue = enabled || strcmp(argv[3], "off") == 0 ||
+                              strcmp(argv[3], "false") == 0 ||
+                              strcmp(argv[3], "0") == 0;
+            if (!validSetting || !validValue) {
+                fprintf(stderr,
+                        "用法: %s --notify-setting desktop-pet|voice-conversation on|off\n",
+                        argv[0]);
+                return 2;
+            }
+            [[NSDistributedNotificationCenter defaultCenter]
+                postNotificationName:@"com.shougongchuan.reai.simulate-setting"
+                              object:nil
+                            userInfo:@{@"setting": setting, @"enabled": @(enabled)}
                   deliverImmediately:YES];
             return 0;
         }
